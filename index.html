@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+   <title>Xmas Game</title>
+   <meta charset="utf-8"/>
+   <meta name="description" content="Tap all xmas images! Beat your friends!">
+   <meta name="viewport" content="width=device-width, viewport-fit=cover, user-scalable=no,initial-scale=1.0, maximum-scale=1.0">
+   <meta property="og:image" content="https://www.tabor-belun.cz/xmasgame/icons/grinch6.png">
+   <link rel="shortcut icon" type="image/jpg" href="./icons/grinch6.png"/>
+   <meta name="author" content="Ondřej Škoda">
+</head>
+<body>
+   <style>
+       @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+       @font-face {
+          font-family: "segmental";
+          src: url("./fonts/segmental.woff") format('woff');
+      }
+       html *{
+           position:relative;
+           margin:0;
+           padding:0;
+           float:none;
+           font-family:"Roboto",serif;
+           color:white;
+           border:0;
+           outline: 0;
+           box-sizing:border-box;
+       }
+       button,input,a{
+           pointer-events: initial;
+           touch-action: initial;
+       }
+       html,body{
+           height:100%;
+           max-height:100%;
+       }
+       body {
+           background-color:black;
+           font-family:"Roboto",serif;
+           background-image: repeating-linear-gradient(45deg, darkred 0px, darkred 25px, white 25px, white 50px);
+       }
+       .tab{
+           display:none;
+           width:80vw;
+           height: calc(100% - 100px);
+           max-width:1000px;
+           margin: 0 auto;
+           background-color: white;
+       }
+       .tab .content{
+           height:auto;
+           overflow-y: scroll;
+       }
+       .tab.active {
+           display:block;
+           overflow-y: scroll;
+       }
+       .tab.active .content, .tab.active .content * {
+           pointer-events: all;
+           touch-action: manipulation !important;
+       }
+       .tab:before, .tab:after{
+           content:"";
+           display:block;
+           width:100%;
+           height:0;
+           float:none;
+           clear:both;
+       }
+       .grid {
+           width:100%;
+           height:100%;
+           background-color: #0b1f63;
+           overflow:hidden;
+           touch-action:none;
+           pointer-events: none;
+       }
+       nav {
+           background-color:darkred;
+           width:80vw;
+           max-width:1000px;
+           margin: 0 auto;
+           display:block;
+           height:100px;
+           padding:0 10px;
+       }
+       .status {
+           width:100%;
+           height:100%;
+           min-height:100px;
+       }
+       .status>*{
+           color:white;
+           text-transform: uppercase;
+           text-align:center;
+           font-weight: bold;
+           font-size: 30px;
+           height:100%;
+           float:left;
+       }
+       .status .item{
+           height: 50%;
+           text-align: left;
+       }
+       .status .item img {
+           vertical-align: 20px;
+           height:100%;
+           width:40px;
+           padding:5px 0;
+           margin-right:10px;
+       }
+       .button {
+           cursor:pointer;
+       }
+       #score, #grinch {
+           vertical-align: middle;
+           display:inline-block;
+           height:100px;
+           font-size:100%;
+           font-family:segmental, roboto, serif;
+           text-align: right;
+           width:calc(80vw - 200px);
+           max-width:200px;
+       }
+       #menu{
+           float:right;
+           width:50px;
+           height:50px;
+           margin-top:25px;
+           min-width:50px;
+           border:1px solid white;
+           margin-right:15px;
+           pointer-events: all;
+       }
+       #menu img
+       {
+           display:inline-block;
+           height:50%;
+           margin-top:28%;
+           pointer-events: none;
+       }
+
+       .content {
+           padding: 5vh;
+           background-color: #0b1f63;
+           height:auto;
+           min-height: 100%;
+       }
+       .menuitem {
+           background-color:darkred;
+           color:white;
+           font-weight: bold;
+           width:100%;
+           border:1px solid white;
+           text-align:center;
+           cursor:pointer;
+           height:10vh;
+           line-height:10vh;
+           margin-bottom:5vh;
+           pointer-events: all;
+       }
+       .menuitem.hidden{
+           display:none;
+       }
+       .filter-white{
+           filter:invert(100%);
+       }
+      .clickitem {
+          width:10px;
+          height:10px;
+          position:absolute;
+          left:0;
+          right:0;
+          background-color:transparent;
+          background-size: contain;
+          background-repeat: no-repeat;
+          cursor:pointer;
+          pointer-events: all;
+          border-radius: 50%;
+      }
+      h1 {
+          font-size:30px;
+          margin-bottom:2vh;
+      }
+      ol {
+          border:1px solid white;
+          display:block;
+      }
+      li {
+          padding:5px;
+          list-style-position: inside;
+          display:block;
+          background:darkred;
+      }
+      li:nth-child(odd){
+          background: transparent;
+      }
+      p, li {
+          font-size: 20px;
+      }
+      p {
+          margin-bottom:2vh;
+      }
+      #email, #submitScore{
+          display:block;
+          height:40px;
+          background:white;
+          color:black;
+          font-size:25px;
+          border-radius:5px;
+          padding:5px;
+          border: 1px solid darkred;
+          width:80%;
+          margin-right:10%;
+          text-transform: uppercase;
+      }
+      #submitScore{
+          background:darkred;
+          color:white;
+      }
+      .score {
+          font-weight: bold;
+          font-family: segmental, roboto, serif;
+      }
+   </style>
+   <script type="application/javascript">
+      'use strict';
+      class Game {
+            definitions = {
+               maxAllowedElements:10,
+               divider:3,
+               eventTypes:{
+                  click:"click",
+                  timeout:"timeout",
+                  gameover:"gameover"
+               },
+               tabs:{
+                  menu:"tabmenu",
+                  game:"game",
+                  info:"tabinfo",
+                  gameover:"tabgameover",
+                  submitscore:"tabsubmitscore",
+                  highscore:"tabhighscore",
+                  error:"taberror"
+               },
+               subeventTypes:{
+                  score:"+ score",
+                  strike:"+ strike",
+                  abort:"aborted by user",
+                  timeout:"+ timeout",
+                  timeoutGrinch:"grinched out"
+               },
+               statuses : {
+                  stop:0,
+                  start:1,
+                  pause:2
+               },
+               elementTypes:[
+                 'xmas',
+                 'grinch'
+               ],
+               icons:{
+                  xmas:[
+                     "candy_cane.svg",
+                     "christmas_ball.svg",
+                     "christmas_candle.svg",
+                     "christmas_candy.svg",
+                     "christmas_gift.svg",
+                     "christmas_mitten.svg",
+                     "christmas_star.svg",
+                     "christmas_stocking.svg",
+                     "christmas_tree.svg",
+                     "christmas_wreath.svg",
+                     "church.svg",
+                     "cinnamon_sticks.svg",
+                     "elf.svg",
+                     "fireplace.svg",
+                     "firework.svg",
+                     "gingerbread_man.svg",
+                     "holy_bible.svg",
+                     "hot_chocolate_with_marshmallows.svg",
+                     "ice_skate.svg",
+                     "jingle_bell.svg",
+                     "Mulled_wine.svg",
+                     "reindeer.svg",
+                     "santa.svg",
+                     "scarf.svg",
+                     "ski.svg",
+                     "sleigh.svg",
+                     "snow_storm.svg",
+                     "snowflake.svg",
+                     "snowman.svg",
+                     "the_toast.svg"
+                  ],
+                  "grinch":[
+                     "grinch1.png",
+                     "grinch2.png",
+                     "grinch3.png",
+                     "grinch4.png",
+                     "grinch5.png",
+                     "grinch6.png",
+                  ]
+               },
+               elementInterval:1000,
+               grinchInteval:1000,
+               scoreUnits:10,
+               maxAllowedStrikes:10,
+               appearance:10000, //in miliseconds
+            };
+            gameElement={};
+            gridElement={};
+            state;
+            defaultState = {
+               intervals:{
+                  'addItem':'',
+                  'timeout':'',
+                  'addGrinch':''
+               },
+               gameElements:{},
+               gameElementsIndex:0,
+               appearanceElements: {},
+               positionsElements:{},
+               pauseTime:0,
+               timeouts:0,
+               strikes:0,
+               score:0,
+               appearanceDivider:1,
+               difficulty:0,
+               grid:{},
+               lastHighScore: [{"nick":"vesela@wpj.cz","score":"9298"},{"nick":"pecast_cz@seznam.cz","score":"5192"},{"nick":"toman@wpj.cz","score":"3059"},{"nick":"joe@wpj.cz","score":"2626"},{"nick":"kysela@wpj.cz","score":"2344"},{"nick":"toman@wpj.cz","score":"2049"},{"nick":"HP","score":"2047"},{"nick":"lucie@wpj.cz","score":"2015"},{"nick":"etrich@wpj.cz","score":"1105"},{"nick":"pecast_cz@seznam.cz","score":"328"},{"nick":"joe@wpj.cz","score":"142"},{"nick":"joe@wpj.cz","score":"142"},{"nick":"joe@wpj.cz","score":"142"},{"nick":"joe@wpj.cz","score":"142"},{"nick":"joe@wpj.cz","score":"142"}]
+            };
+            log;
+            sendMessage={
+               nick:'',
+               score:'',
+               log:''
+            };
+         constructor() {
+            this.setBaseElements();
+            this.clearState();
+            this.updateInfo();
+         }
+         startGame(){
+            this.clearLog();
+            this.clearMessage();
+            this.logger('START','GAME STARTED','NONE');
+            this.changeStatus(this.getStart());
+            this.generateGrid();
+            this.resetTimes();
+            this.startIntervals();
+            this.updateInfo();
+         }
+         pauseGame(){
+            this.logger('PAUSE','GAME PAUSED','NONE');
+            this.changeStatus(this.getPause());
+            this.setPauseTime();
+            this.stopIntervals();
+         }
+         stopGame(){
+            this.logger('STOP','GAME STOPED','NONE');
+            this.changeStatus(this.getStop());
+            this.stopIntervals();
+            this.clearGrid();
+            this.clearState();
+         }
+         changeStatus(status){
+            this.state.status = status;
+            this.hidePlayResume();
+         }
+         hidePlayResume(){
+            const playElement = document.getElementById('play');
+            const resumeElement = document.getElementById('resume');
+            const stopElement = document.getElementById('stop');
+            if (this.getStatus()===this.getPause()){
+               resumeElement.classList.remove('hidden');
+               playElement.classList.add('hidden');
+            }
+            if (this.getStatus()===this.getStop()){
+               resumeElement.classList.add('hidden');
+               playElement.classList.remove('hidden');
+            }
+            if (this.getStatus()!==this.getStop()) {
+               stopElement.classList.remove('hidden');
+            }
+            if (this.getStatus()===this.getStop()) {
+               stopElement.classList.add('hidden');
+            }
+         }
+         startIntervals(){
+            const thisGame = this;
+            this.stopIntervals();
+            this.state.intervals.addItem = setInterval(function(){
+               const multiply = thisGame.calcMultiplier();
+               for (let i = 1; i <= multiply; i++) {
+                  thisGame.addNewElement(thisGame.definitions.elementTypes[0]);
+               }
+            }, this.definitions.elementInterval);
+            this.state.intervals.addGrinch = setInterval(function(){
+               const multiply = thisGame.calcMultiplier();
+               for (let i = 1; i <= multiply; i++) {
+                  thisGame.addNewElement(thisGame.definitions.elementTypes[1]);
+               }
+            }, this.definitions.grinchInteval);
+            this.state.intervals.timeout = setInterval(function(){thisGame.timeOutElements()},900);
+         }
+         stopIntervals(){
+            clearInterval(this.state.intervals.addItem);
+            clearInterval(this.state.intervals.timeout);
+            clearInterval(this.state.intervals.addGrinch);
+         }
+         resetTimes(){
+            if (this.getPauseTime() === 0) {
+               return;
+            }
+            const delta = Date.now() - this.state.pauseTime;
+            for (let key in this.getAppearances()) {
+               // skip loop if the property is from prototype
+               if (!this.getAppearances().hasOwnProperty(key)) continue;
+               this.getAppearances()[key] = this.getAppearances()[key] + delta;
+            }
+         }
+         clearGrid(){
+            for (let key in this.getElements()) {
+               // skip loop if the property is from prototype
+               if (!this.getElements().hasOwnProperty(key)) continue;
+               this.handleRemoveElement(this.getElements()[key]);
+            }
+         }
+         clearState(){
+            this.state = JSON.parse(JSON.stringify(this.defaultState));
+         }
+         setBaseElements(){
+            const thisGame = this;
+            this.gameElement = document.getElementById('game');
+            this.gridElement = this.getGameElement().querySelector('.grid');
+            document.getElementById('menu').addEventListener('click', (e) => {
+               thisGame.handleClick(e);
+            });
+            document.getElementById('play').addEventListener('click', (e) => {
+               thisGame.handleClick(e);
+            });
+            document.getElementById('stop').addEventListener('click', (e) => {
+               thisGame.handleClick(e);
+            });
+            document.getElementById('resume').addEventListener('click', (e) => {
+               thisGame.handleClick(e);
+            });
+            document.getElementById('info').addEventListener('click', (e) => {
+               thisGame.handleClick(e);
+            });
+            document.getElementById('highscore').addEventListener('click', (e) => {
+               thisGame.handleClick(e);
+            });
+            document.getElementById('submitScore').addEventListener('click', (e) => {
+               thisGame.handleClick(e);
+            });
+         }
+         generateGrid(){
+            const grid = this.getGridDimensions();
+            const eD = this.getElementDimension();
+            const rows = Math.floor(grid.h / eD) * 2;
+            const cols = Math.floor(grid.w / eD) * 2;
+            for (let x = 1; x < cols; x++) {
+               for (let y = 1; y < rows; y++) {
+                  if (
+                     ((y%2) === 0 && (x%2)===0) ||
+                     ((y%2) !== 0 && (x%2)!==0)
+                  ) {
+                     this.state.grid[x+" "+y]=false;
+                  }
+               }
+            }
+         }
+         getFreePositions(){
+            const free = [];
+            for(let key in this.getGrid()){
+               if (!this.getGrid().hasOwnProperty(key)) continue;
+               if (!this.getGrid()[key]) {
+                  free.push(key);
+               }
+            }
+            return free;
+         }
+         getPositionFromKey(key){
+            const posArr = key.split(" ");
+            const eD = this.getPercentageDimensions();
+            return {x:(posArr[0]-1)*(eD.w/2), y:(posArr[1]-1)*(eD.h/2)};
+         }
+         getPosition() {
+            const free = this.getFreePositions();
+            if (free.length < 1) {
+               return false;
+            }
+            return free[this.getRandomInt(free.length)];
+         }
+         addNewElement(type){
+            if (this.getCountElements()>(Object.keys(this.getGrid()).length/2)) {
+               return;
+            }
+            if (type === this.definitions.elementTypes[1]) {
+               if (this.getRandomInt(100)<70) {
+                  return;
+               }
+            }
+            const element = document.createElement('div');
+            const index = this.state.gameElementsIndex;
+            const pos = this.getPosition();
+            if (pos === false) {
+               return;
+            }
+            const thisGame = this;
+            this.getElements()[index] = element;
+            this.getElements()[index].classList.add('clickitem');
+            this.getElements()[index].setAttribute('data-index', index);
+            this.getElements()[index].setAttribute('data-type',type);
+            const appearance = this.getAppearance() * this.calcAppearanceDivider();
+            this.getAppearances()[index] = Date.now() + (appearance);
+            const pPos = this.getPositionFromKey(pos);
+            this.getGrid()[pos] = true;
+            this.getElements()[index].style.left = pPos.x + "%";
+            this.getElements()[index].style.top = pPos.y + "%";
+            this.getPositions()[index] = pos;
+            this.getElements()[index].style.width = this.getElementDimension()+"px";
+            this.getElements()[index].style.height = this.getElementDimension()+"px";
+            this.getElements()[index].style.backgroundImage = "url("+this.getRandomIcon(type)+")";
+            this.getElements()[index].setAttribute('onclick','gms.handleClick(event);')
+            this.getGridElement().appendChild(this.state.gameElements[index]);
+            this.state.gameElementsIndex =  this.state.gameElementsIndex + 1;
+         }
+         timeOutElements(){
+            const types = this.getEventTypes();
+            const time = Date.now();
+            for (let key in this.getAppearances()) {
+               const value = this.getAppearances()[key];
+               if (time > value) {
+                  this.handleGameEvent(types.timeout, this.getElements()[key].getAttribute('data-type'));
+                  this.handleRemoveElement(this.getElements()[key]);
+               }
+            }
+         }
+         handleClick(e){
+            const element = e.target;
+            const id = element.id;
+            const classNames = element.classList;
+            if(id === 'stop'){
+                  this.handleGameEvent(this.getEventTypes().gameover,this.getSubEventTypes().abort);
+               }
+               if(id === "menu"){
+                  if (this.getStatus() === this.getStart()) {
+                     this.pauseGame();
+                  }
+                  this.switchTab(this.getTabs().menu);
+               }
+               if (id === "info") {
+                  this.switchTab(this.getTabs().info);
+               }
+               if (id === "highscore") {
+                  this.loadHighScore();
+                  this.switchTab(this.getTabs().highscore);
+               }
+               if (id === "play" || id === "resume") {
+                  this.switchTab(this.getTabs().game);
+                  this.startGame();
+               }
+               if (id==="gameover") {
+                  this.switchTab(this.getTabs().gameover);
+               }
+               if (id==="submitScore") {
+                  const email = document.getElementById("email").value;
+                  if (email !=="") {
+                     this.submitScore(email);
+                  } else {
+                     const errorelement = document.getElementById('errormessage');
+                     const submitScore = document.createElement(button);
+                     errorelement.innerHTML="";
+                     errorelement.innerText="Nezadal jste email/nick";
+                     submitScore.id = "gameover";
+                     submitScore.innerText = "Zkusit znovu."
+                     submitScore.setAttribute('onlick','gms.handleClick(event);')
+                     errorelement.appendChild(submitScore);
+                     this.switchTab(this.getTabs().error);
+                  }
+               }
+               if (classNames.contains("clickitem")) {
+                  this.handleClickElement(e);
+               }
+         }
+         handleClickElement(event){
+            if (this.getStatus() !== this.getStart()) {
+               return false;
+            }
+            const types = this.getEventTypes();
+            const target = event.target;
+            this.handleGameEvent(types.click,target.getAttribute('data-type'));
+            this.handleRemoveElement(target);
+         }
+         handleRemoveElement(element){
+            const index = element.getAttribute('data-index');
+            this.getGridElement().removeChild(element);
+            this.getGrid()[this.getPositions()[index]] = false;
+            delete(this.getAppearances()[index]);
+            delete(this.getElements()[index]);
+            delete(this.getPositions()[index])
+         }
+         handleScore(){
+            this.setScore(this.getScore()+this.getDefScore());
+         }
+         handleStrike(){
+            this.setStrikes(this.getStrikes() + 1);
+            if (this.getStrikes()>2) {
+               this.handleGameEvent(this.getEventTypes().gameover,this.getSubEventTypes().strike);
+            }
+         }
+         handleTimeouts(){
+            this.setTimeouts(this.getTimeouts() + 1);
+            this.setScore(this.getScore()-1);
+            if (this.getTimeouts() > (this.getScore()/10) && this.getScore()>100) {
+               this.handleGameEvent(this.getEventTypes().gameover,this.getSubEventTypes().timeout);
+            }
+         }
+         handleTimeoutGrinch(){
+            this.setScore(this.getScore()+1);
+         }
+         handleGameOver(){
+            this.pauseGame();
+            document.getElementById('gameoverscore').innerText = this.getScore();
+            this.setMessage();
+            this.switchTab(this.getTabs().gameover);
+            this.stopGame();
+         }
+         submitScore(email){
+            let data = this.getMessage();
+            data.nick = email;
+            fetch("/xmasgame/highscore.php", {
+              method: "POST",
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify(data)
+            }).then(res => {
+               res.json().then(data => {
+                  if (data.state === 'ok') {
+                     this.loadHighScore();
+                     this.switchTab(this.getTabs().highscore);
+                     this.clearMessage()
+                  } else {
+                     const errorelement = document.getElementById('errormessage');
+                     errorelement.innerHTML="";
+                     errorelement.innerText = data.message;
+                     this.switchTab(this.getTabs().error);
+                  }
+               })
+            });
+         }
+         loadHighScore(){
+            const thisGame = this;
+            fetch("/xmasgame/highscore.php?highscore=true", {
+              method: "POST",
+              headers: {'Content-Type': 'application/json'}
+            }).then(res => {
+               res.json().then(data => {
+                  if (data.state === 'ok') {
+                     const score = JSON.parse(data.data);
+                     thisGame.setLastHighScore(score);
+                     thisGame.renderHighScore(score);
+                  }
+               })
+            }).catch((error) => {
+               thisGame.renderHighScore(thisGame.getLastHighScore());
+            });
+         }
+         renderHighScore(score){
+            const list = document.getElementById('highscorelist');
+            list.innerHTML = '';
+            for(let key in score){
+               const element = document.createElement('li');
+               element.innerHTML = "<strong>"+score[key].nick+"</strong> - <span class='score'>"+score[key].score+"</span>";
+               list.appendChild(element);
+            }
+
+         }
+         handleGameEvent(eventType, object){
+            const types = this.getEventTypes();
+            const subTypes = this.getSubEventTypes();
+            let subevent;
+            switch(eventType){
+               case types.click:
+                  switch (object) {
+                     case 'xmas':
+                        this.handleScore();
+                        subevent = subTypes.score;
+                        break;
+                     case 'grinch':
+                        this.handleStrike();
+                        subevent = subTypes.strike;
+                        break;
+                     default: break;
+                  }
+                  break;
+               case types.timeout:
+                  switch (object) {
+                     case 'xmas':
+                        this.handleTimeouts();
+                        subevent = subTypes.timeout;
+                        break;
+                     case 'grinch':
+                        this.handleTimeoutGrinch();
+                        subevent = subTypes.timeoutGrinch;
+                        break;
+                     default: break;
+                  }
+                  break;
+               case types.gameover:
+                  this.handleGameOver();
+                  subevent = object;
+                  break;
+            }
+            this.updateInfo();
+            this.logger(eventType,subevent,object);
+         }
+         switchTab(tabId){
+            this.hideTab(this.getActiveTab());
+            this.showTab(document.getElementById(tabId));
+         }
+         showTab(element){
+            element.classList.add('active')
+         }
+         hideTab(element){
+            element.classList.remove('active')
+         }
+         calcAppearanceDivider(){
+            return this.getAppearanceDivider() - (this.getNumberPower(this.getScore())/10);
+         }
+         calcMultiplier(){
+            let multiply = this.getNumberPower(this.getScore());
+            if (multiply > 3) {
+               multiply = 3;
+            }
+            multiply = this.getRandomInt(multiply)+1;
+            return multiply;
+         }
+         getLastHighScore(){
+            return this.state.lastHighScore;
+         }
+         setLastHighScore(score){
+            return this.state.lastHighScore = score;
+         }
+         getCountElements(){
+            return Object.keys(this.getElements()).length;
+         }
+         getNumberPower(x){
+            if (x < 1) {
+               return 1;
+            }
+            return Math.floor(Math.log10(x));
+         }
+         getActiveTab(){
+            const tabs = document.querySelectorAll('.tab');
+            for (let key in tabs){
+               if (tabs[key].classList.contains('active')) {
+                  return tabs[key];
+               }
+            }
+            return document.querySelector('.tab');
+         }
+         getRect(pos){
+            const wh = this.getPercentageDimensions();
+            return {
+               left:pos.x,
+               right:pos.x+wh.w,
+               top:pos.y,
+               bottom:pos.y+wh.h,
+            };
+         }
+         getPercentageDimensions(){
+            const grid = this.getGridDimensions();
+            const eD = this.getElementDimension();
+            const w = eD / (grid.w / 100);
+            const h = eD / (grid.h / 100);
+            return {w,h};
+         }
+         getElementDimension(){
+            const grid = this.getGridDimensions();
+            let smaller = grid.w;
+            if (grid.w > grid.h) {
+               smaller = grid.h;
+            }
+            return smaller/this.getDivider();
+         }
+         getGridDimensions(){
+            const w = this.getGridElement().offsetWidth;
+            const h = this.getGridElement().offsetHeight;
+            return {w,h};
+         }
+         getRandomInt(max) {
+            return Math.floor(Math.random() * max);
+         }
+         getRandomIcon(type){
+            return './icons/'+this.getIcons()[type][this.getRandomInt(this.getIcons()[type].length)];
+         }
+         getTabs(){
+            return this.definitions.tabs;
+         }
+         getStart(){
+            return this.definitions.statuses.start;
+         }
+         getStop(){
+            return this.definitions.statuses.stop;
+         }
+         getPause(){
+            return this.definitions.statuses.pause;
+         }
+         getAppearance(){
+            return this.definitions.appearance;
+         }
+         getIcons(){
+            return this.definitions.icons;
+         }
+         getDefScore(){
+            return this.definitions.scoreUnits;
+         }
+         getEventTypes(){
+            return this.definitions.eventTypes;
+         }
+         getSubEventTypes(){
+            return this.definitions.subeventTypes;
+         }
+         getScore(){
+            return this.state.score;
+         }
+         setScore(score){
+            this.state.score = score;
+         }
+         getStrikes(){
+            return this.state.strikes;
+         }
+         setStrikes(strikes){
+            this.state.strikes = strikes;
+         }
+         getTimeouts(){
+            return this.state.timeouts;
+         }
+         setTimeouts(timeouts){
+            this.state.timeouts = timeouts;
+         }
+         getGridElement(){
+            return this.gridElement;
+         }
+         getGameElement(){
+            return this.gameElement;
+         }
+         getElements(){
+            return this.state.gameElements;
+         }
+         getStatus(){
+            return this.state.status;
+         }
+         getPositions(){
+            return this.state.positionsElements;
+         }
+         setAppearanceDivider(ad){
+            this.state.appearanceDivider = ad;
+         }
+         getAppearanceDivider(){
+            return this.state.appearanceDivider;
+         }
+         getAppearances(){
+            return this.state.appearanceElements;
+         }
+         setPauseTime(){
+            this.state.pauseTime = Date.now();
+         }
+         getPauseTime(){
+            return this.state.pauseTime;
+         }
+         getDivider(){
+            return this.definitions.divider;
+         }
+         getDifficulty(){
+            return this.state.difficulty;
+         }
+         getGrid(){
+            return this.state.grid;
+         }
+         clearLog(){
+            this.setLog('');
+         }
+         logLine(line){
+            let log = this.getLog();
+            if (log === ''){
+               log = '['+line;
+            } else {
+               log = log+','+line;
+            }
+
+            this.setLog(log);
+         }
+         writeOutLog(){
+            let log = this.getLog();
+            if (log === ''){
+               log = '[';
+            }
+            return log+']';
+         }
+         setLog(log){
+            this.log = log;
+         }
+         getLog(){
+            return this.log;
+         }
+         updateInfo(){
+            document.getElementById('score').innerText = this.getScore();
+            document.getElementById('grinch').innerText = this.getStrikes();
+         }
+         setMessage(){
+            this.sendMessage = {nick:'',score:this.getScore(),log:JSON.parse(this.writeOutLog())};
+         }
+         getMessage(){
+            return this.sendMessage;
+         }
+         clearMessage(){
+            this.sendMessage = {nick:'',score:'',log:''};
+         }
+         logger(event, subevent, object){
+            const log = {
+               'time': Date.now(),
+               'event': event,
+               'subevent': subevent,
+               'object': object,
+               'scores': this.getScore(),
+               'strikes': this.getStrikes(),
+               'timeouts': this.getTimeouts()
+            };
+            this.logLine(JSON.stringify(log));
+         }
+      }
+
+      let gms;
+      document.addEventListener("DOMContentLoaded", function(event) {
+      document.addEventListener('dblclick', (event) => {
+          //event.preventDefault()
+      }, { passive: false });
+         gms = new Game();
+      });
+   </script>
+   <nav>
+      <div class="status">
+         <div>
+            <div class="item"><img src="./icons/scoreboard-tied-svgrepo-com.svg" class="filter-white"><span id="score"></span></div>
+            <div class="item"><img src="./icons/grinch6.png"><span id="grinch"></span></div>
+         </div>
+         <div class="button" id="menu"><img src="./icons/Hamburger_icon.svg" alt='menu' class="filter-white"></div>
+      </div>
+   </nav>
+   <section class="tab" id="game">
+      <div class="grid"></div>
+   </section>
+   <section class="tab active" id="tabmenu">
+      <div class="content">
+         <div class="menuitem" id="play">START GAME</div>
+         <div class="menuitem hidden" id="resume">RESUME GAME</div>
+         <div class="menuitem hidden" id="stop">ABORT GAME</div>
+         <div class="menuitem" id="highscore">HIGH SCORE</div>
+         <div class="menuitem" id="info">GAME INFO</div>
+      </div>
+   </section>
+   <section class="tab" id="tabinfo">
+      <div class="content">
+         <h1>Xmas game</h1>
+         <p>Drazí kolegové, připravil jsem si pro Vás maličkou hru.</p>
+         <p>Vyklikej všechny vánočně motivované obrázky, nenech si žádný uniknout, jinak můžeš prohrát!</p>
+         <p>Na Grinche neklikej, za tři Grinche dostaneš krásný konec hry.</p>
+         <p>Získej nejvyšší skóre!</p>
+      </div>
+   </section>
+   <section class="tab" id="tabgameover">
+      <div class="content">
+         <h1>Gameover</h1>
+         <p>Prohrál jsi, ale nevadí, dosáhl jsi skóre: <span id="gameoverscore" class="score">0</span></p>
+         <p>Odešli skóre do žebříčku</p>
+         <p><input type="email" placeholder="Zadej svůj email" id="email"><button id="submitScore">Odešli</button></p>
+      </div>
+   </section>
+   <section class="tab" id="tabhighscore">
+      <div class="content">
+         <h1>HighScore</h1>
+         <ol id="highscorelist">
+         </ol>
+      </div>
+   </section>
+   <section class="tab" id="taberror">
+      <div class="content">
+         <h1>Error</h1>
+         <p id="errormessage">
+         </p>
+      </div>
+   </section>
+</body>
+</html> 
